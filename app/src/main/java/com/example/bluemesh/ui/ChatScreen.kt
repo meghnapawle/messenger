@@ -118,7 +118,7 @@ fun ChatScreen(
                         bluetoothManager.sendMessage(inputText)
                         inputText = ""
                     },
-                    enabled = inputText.isNotBlank() && connectionState is ConnectionState.Connected
+                    enabled = inputText.isNotBlank() && (connectionState is ConnectionState.Connected)
                 ) {
                     Text("Send")
                 }

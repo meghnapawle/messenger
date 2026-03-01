@@ -1,28 +1,22 @@
 package com.example.bluemesh.bluetooth
 
+import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothServerSocket
-import android.bluetooth.BluetoothSocket
-import android.content.BroadcastReceiver
+import android.bluetooth.*
+import android.bluetooth.le.*
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.ParcelUuid
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 import java.util.UUID
 
-/**
- * Manages Bluetooth connection (client + server), state, and chat send/receive.
- */
-private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1200-8000-00805F9B34FB")
+private val SERVICE_UUID: UUID = UUID.fromString("0000180D-0000-1000-8000-00805f9b34fb")
+private val CHARACTERISTIC_UUID: UUID = UUID.fromString("00002A37-0000-1000-8000-00805f9b34fb")
 
 data class ChatMessage(
     val text: String,
@@ -39,10 +33,10 @@ sealed class ConnectionState {
     data object Disconnected : ConnectionState()
 }
 
-@SuppressLint("MissingPermission")
 class BluetoothChatManager(private val context: Context) {
 
-    private val adapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+    private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+    private val adapter: BluetoothAdapter? = bluetoothManager.adapter
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Idle)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -53,158 +47,214 @@ class BluetoothChatManager(private val context: Context) {
     private val _discoveredDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<BluetoothDevice>> = _discoveredDevices.asStateFlow()
 
-    private var socket: BluetoothSocket? = null
-    private var connectThread: Thread? = null
-    private var serverThread: Thread? = null
-    private var readerThread: Thread? = null
-    private var serverSocket: BluetoothServerSocket? = null
+    private var bluetoothGatt: BluetoothGatt? = null
+    private var gattServer: BluetoothGattServer? = null
+    private var connectedDevice: BluetoothDevice? = null
 
-    private val discoveryReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == BluetoothDevice.ACTION_FOUND) {
-                val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                if (device != null) {
-                    _discoveredDevices.update {
-                        if (device in it) it else it + device
-                    }
-                }
+    private fun hasPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun checkAdvertisePermission() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) hasPermission(Manifest.permission.BLUETOOTH_ADVERTISE) else true
+    private fun checkScanPermission() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) hasPermission(Manifest.permission.BLUETOOTH_SCAN) else true
+    private fun checkConnectPermission() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) hasPermission(Manifest.permission.BLUETOOTH_CONNECT) else true
+
+    @SuppressLint("MissingPermission")
+    private val scanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            val device = result.device ?: return
+            _discoveredDevices.update { list ->
+                if (list.any { it.address == device.address }) list else list + device
             }
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun startDiscovery() {
-        if (adapter == null || !adapter.isEnabled) return
-        val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
-        context.registerReceiver(discoveryReceiver, filter)
-        adapter.startDiscovery()
+        if (adapter == null || !adapter.isEnabled || !checkScanPermission()) return
+        _discoveredDevices.value = emptyList()
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+        adapter.bluetoothLeScanner?.startScan(null, settings, scanCallback)
     }
 
+    @SuppressLint("MissingPermission")
     fun stopDiscovery() {
-        if (adapter == null || !adapter.isEnabled) return
-        adapter.cancelDiscovery()
-        try {
-            context.unregisterReceiver(discoveryReceiver)
-        } catch (_: IllegalArgumentException) {
-            // Receiver not registered
-        }
+        if (adapter == null || !adapter.isEnabled || !checkScanPermission()) return
+        adapter.bluetoothLeScanner?.stopScan(scanCallback)
     }
 
+    @SuppressLint("MissingPermission")
     fun getPairedDevices(): List<BluetoothDevice> {
-        if (adapter == null || !adapter.isEnabled) return emptyList()
+        if (adapter == null || !adapter.isEnabled || !checkConnectPermission()) return emptyList()
         return adapter.bondedDevices.toList()
     }
 
+    @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
+        if (!checkConnectPermission()) return
         disconnect()
-        connectThread = Thread {
-            try {
-                _connectionState.value = ConnectionState.Connecting
-                val s = device.createRfcommSocketToServiceRecord(SPP_UUID)
-                s.connect()
-                setSocketAndStartReader(s, device.name ?: "Unknown", device.address)
-            } catch (e: IOException) {
-                _connectionState.value = ConnectionState.Failed(e.message ?: "Connection failed")
-            }
-        }.apply { start() }
+        _connectionState.value = ConnectionState.Connecting
+        bluetoothGatt = device.connectGatt(context, false, gattCallback)
     }
 
-    fun startServer() {
-        if (adapter == null || !adapter.isEnabled) return
-        stopServer()
-        serverThread = Thread {
-            try {
-                val ss = adapter.listenUsingRfcommWithServiceRecord("BlueMesh", SPP_UUID)
-                serverSocket = ss
-                _connectionState.value = ConnectionState.Listening
-                val clientSocket = ss.accept()
-                serverSocket = null
-                val device = clientSocket.remoteDevice
-                setSocketAndStartReader(clientSocket, device.name ?: "Unknown", device.address)
-            } catch (e: IOException) {
-                if (serverSocket != null) {
-                    _connectionState.value = ConnectionState.Failed(e.message ?: "Accept failed")
+    private val gattCallback = object : BluetoothGattCallback() {
+        @SuppressLint("MissingPermission")
+        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                connectedDevice = gatt.device
+                gatt.discoverServices()
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                _connectionState.value = ConnectionState.Disconnected
+                connectedDevice = null
+            }
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val service = gatt.getService(SERVICE_UUID)
+                val characteristic = service?.getCharacteristic(CHARACTERISTIC_UUID)
+                if (characteristic != null) {
+                    gatt.setCharacteristicNotification(characteristic, true)
+                    val descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+                    if (descriptor != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            gatt.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                            gatt.writeDescriptor(descriptor)
+                        }
+                    }
                 }
+                _connectionState.value = ConnectionState.Connected(gatt.device.name, gatt.device.address)
             }
-        }.apply { start() }
-    }
+        }
 
-    fun stopServer() {
-        try {
-            serverSocket?.close()
-        } catch (_: IOException) {}
-        serverSocket = null
-        serverThread?.interrupt()
-        serverThread = null
-        if (_connectionState.value is ConnectionState.Listening) {
-            _connectionState.value = ConnectionState.Idle
+        @Deprecated("Deprecated in Java")
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            val message = String(characteristic.value)
+            _messages.update { it + ChatMessage(message, false) }
+        }
+
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+            val message = String(value)
+            _messages.update { it + ChatMessage(message, false) }
         }
     }
 
-    private fun setSocketAndStartReader(s: BluetoothSocket, deviceName: String, deviceAddress: String) {
-        socket = s
-        _connectionState.value = ConnectionState.Connected(deviceName, deviceAddress)
-        startReaderThread()
+    @SuppressLint("MissingPermission")
+    fun startServer() {
+        if (adapter == null || !adapter.isEnabled || !checkAdvertisePermission() || !checkConnectPermission()) return
+        stopServer()
+
+        gattServer = bluetoothManager.openGattServer(context, gattServerCallback)
+        val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+        val characteristic = BluetoothGattCharacteristic(
+            CHARACTERISTIC_UUID,
+            BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+            BluetoothGattCharacteristic.PERMISSION_WRITE
+        )
+        service.addCharacteristic(characteristic)
+        gattServer?.addService(service)
+
+        val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setConnectable(true)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+            .build()
+
+        val data = AdvertiseData.Builder()
+            .setIncludeDeviceName(true)
+            .addServiceUuid(ParcelUuid(SERVICE_UUID))
+            .build()
+
+        adapter.bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
+        _connectionState.value = ConnectionState.Listening
     }
 
-    private fun startReaderThread() {
-        readerThread = Thread {
-            try {
-                val input = socket?.inputStream ?: return@Thread
-                val reader = BufferedReader(InputStreamReader(input))
-                while (socket?.isConnected == true) {
-                    val line = reader.readLine() ?: break
-                    if (line.isBlank()) continue
-                    _messages.value = _messages.value + ChatMessage(text = line, fromMe = false)
-                }
-            } catch (_: IOException) {
-                // Connection closed
-            } finally {
-                if (_connectionState.value is ConnectionState.Connected) {
-                    _connectionState.value = ConnectionState.Disconnected
-                }
+    private val gattServerCallback = object : BluetoothGattServerCallback() {
+        @SuppressLint("MissingPermission")
+        override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                connectedDevice = device
+                _connectionState.value = ConnectionState.Connected(device.name, device.address)
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                _connectionState.value = ConnectionState.Disconnected
+                connectedDevice = null
             }
-        }.apply { start() }
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onCharacteristicWriteRequest(device: BluetoothDevice, requestId: Int, characteristic: BluetoothGattCharacteristic, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray) {
+            val message = String(value)
+            _messages.update { it + ChatMessage(message, false) }
+            if (responseNeeded) gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
+        }
     }
 
+    private val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {}
+        override fun onStartFailure(errorCode: Int) {}
+    }
+
+    @SuppressLint("MissingPermission")
+    fun stopServer() {
+        if (checkAdvertisePermission()) adapter?.bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
+        gattServer?.close()
+        gattServer = null
+        if (_connectionState.value is ConnectionState.Listening) _connectionState.value = ConnectionState.Idle
+    }
+
+    @SuppressLint("MissingPermission")
     fun sendMessage(text: String) {
         val t = text.trim()
         if (t.isEmpty()) return
-        val out = socket?.outputStream ?: return
-        try {
-            val writer = OutputStreamWriter(out)
-            writer.write(t)
-            writer.write("\n")
-            writer.flush()
-            _messages.value = _messages.value + ChatMessage(text = t, fromMe = true)
-        } catch (e: IOException) {
-            _connectionState.value = ConnectionState.Failed("Send failed: ${e.message}")
+        val gatt = bluetoothGatt
+        if (gatt != null) {
+            val service = gatt.getService(SERVICE_UUID)
+            val characteristic = service?.getCharacteristic(CHARACTERISTIC_UUID)
+            if (characteristic != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeCharacteristic(characteristic, t.toByteArray(), BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+                } else {
+                    @Suppress("DEPRECATION")
+                    characteristic.value = t.toByteArray()
+                    gatt.writeCharacteristic(characteristic)
+                }
+                _messages.update { it + ChatMessage(t, true) }
+            }
+        } else if (gattServer != null && connectedDevice != null) {
+            val service = gattServer?.getService(SERVICE_UUID)
+            val characteristic = service?.getCharacteristic(CHARACTERISTIC_UUID)
+            if (characteristic != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gattServer?.notifyCharacteristicChanged(connectedDevice!!, characteristic, false, t.toByteArray())
+                } else {
+                    @Suppress("DEPRECATION")
+                    characteristic.value = t.toByteArray()
+                    gattServer?.notifyCharacteristicChanged(connectedDevice, characteristic, false)
+                }
+                _messages.update { it + ChatMessage(t, true) }
+            }
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun disconnect() {
         stopServer()
-        connectThread?.interrupt()
-        connectThread = null
-        readerThread?.interrupt()
-        readerThread = null
-        try {
-            socket?.close()
-        } catch (_: IOException) {}
-        socket = null
-        if (_connectionState.value is ConnectionState.Connected || _connectionState.value is ConnectionState.Connecting) {
-            _connectionState.value = ConnectionState.Disconnected
+        if (checkConnectPermission()) {
+            bluetoothGatt?.disconnect()
+            bluetoothGatt?.close()
         }
+        bluetoothGatt = null
+        connectedDevice = null
+        _connectionState.value = ConnectionState.Disconnected
     }
 
-    fun clearMessages() {
-        _messages.value = emptyList()
-    }
-
-    fun release() {
-        stopDiscovery()
-        disconnect()
-    }
-
-    fun getSocket(): BluetoothSocket? = socket
+    fun clearMessages() { _messages.value = emptyList() }
+    fun release() { stopDiscovery(); disconnect() }
     fun isBluetoothAvailable(): Boolean = adapter != null && adapter.isEnabled
 }
