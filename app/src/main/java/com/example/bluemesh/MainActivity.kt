@@ -3,45 +3,83 @@ package com.example.bluemesh
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.*
+import com.example.bluemesh.bluetooth.BluetoothChatManager
+import com.example.bluemesh.bluetooth.ConnectionState
+import com.example.bluemesh.ui.*
 import com.example.bluemesh.ui.theme.BlueMeshTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
             BlueMeshTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
+                val activity = this@MainActivity
+                val bluetoothManager = remember { BluetoothChatManager(applicationContext) }
+
+                DisposableEffect(key1 = bluetoothManager) {
+                    onDispose {
+                        bluetoothManager.release()
+                    }
+                }
+
+                // This effect handles automatic navigation for the server device
+                // when a client connects to it.
+                LaunchedEffect(key1 = bluetoothManager) {
+                    bluetoothManager.connectionState.collect { state ->
+                        if (state is ConnectionState.Connected && currentScreen !is Screen.Chat) {
+                            currentScreen = Screen.Chat(state.deviceName ?: "Unknown", state.deviceAddress)
+                        }
+                    }
+                }
+
+                when (val screen = currentScreen) {
+                    is Screen.Splash -> {
+                        SplashScreen {
+                            currentScreen = Screen.Onboarding
+                        }
+                    }
+                    is Screen.Onboarding -> {
+                        OnboardingScreen {
+                            currentScreen = Screen.Permissions
+                        }
+                    }
+                    is Screen.Permissions -> {
+                        BluetoothPermissionScreen(
+                            activity = activity,
+                            onAllReady = {
+                                currentScreen = Screen.DeviceList
+                            }
+                        )
+                    }
+                    is Screen.DeviceList -> {
+                        DeviceDiscoveryScreen(
+                            bluetoothManager = bluetoothManager,
+                            onDeviceSelected = { deviceName, deviceAddress ->
+                                // This handles the client-side navigation.
+                                currentScreen = Screen.Chat(deviceName, deviceAddress)
+                            },
+                            onBack = {
+                                currentScreen = Screen.Permissions
+                            }
+                        )
+                    }
+                    is Screen.Chat -> {
+                        ChatScreen(
+                            bluetoothManager = bluetoothManager,
+                            deviceName = screen.deviceName,
+                            deviceAddress = screen.deviceAddress,
+                            onBack = {
+                                bluetoothManager.disconnect()
+                                bluetoothManager.clearMessages()
+                                currentScreen = Screen.DeviceList
+                            }
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    BlueMeshTheme {
-        Greeting("Android")
     }
 }
