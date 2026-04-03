@@ -6,13 +6,11 @@ plugins {
 
 android {
     namespace = "com.example.bluemesh"
-    // Updated to 36 as required by the latest library dependencies
     compileSdk = 36 
 
     defaultConfig {
         applicationId = "com.example.bluemesh"
         minSdk = 26
-        // targetSdk can stay at 34 or 35 for better compatibility with your device
         targetSdk = 34 
         versionCode = 1
         versionName = "1.0"
@@ -43,6 +41,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

@@ -1,6 +1,5 @@
 package com.example.bluemesh.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,12 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bluemesh.R
 
 @Composable
 fun OnboardingScreen(onFinished: () -> Unit) {
@@ -28,14 +25,6 @@ fun OnboardingScreen(onFinished: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.logo),
-            contentDescription = "BlueMesh Logo",
-            modifier = Modifier.size(140.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
         Text(
             text = "Welcome to\nBlueMesh",
             fontSize = 36.sp,
