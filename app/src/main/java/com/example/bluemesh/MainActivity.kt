@@ -25,8 +25,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // This effect handles automatic navigation for the server device
-                // when a client connects to it.
                 LaunchedEffect(key1 = bluetoothManager) {
                     bluetoothManager.connectionState.collect { state ->
                         if (state is ConnectionState.Connected && currentScreen !is Screen.Chat) {
@@ -37,33 +35,44 @@ class MainActivity : ComponentActivity() {
 
                 when (val screen = currentScreen) {
                     is Screen.Splash -> {
-                        SplashScreen {
-                            currentScreen = Screen.Onboarding
-                        }
+                        SplashScreen { currentScreen = Screen.Onboarding }
                     }
                     is Screen.Onboarding -> {
-                        OnboardingScreen {
+                        OnboardingScreen { currentScreen = Screen.ProfileSetup }
+                    }
+                    is Screen.ProfileSetup -> {
+                        ProfileSetupScreen { name, vibe ->
+                            bluetoothManager.updateProfile(name, vibe)
                             currentScreen = Screen.Permissions
                         }
                     }
                     is Screen.Permissions -> {
                         BluetoothPermissionScreen(
                             activity = activity,
-                            onAllReady = {
-                                currentScreen = Screen.DeviceList
-                            }
+                            onAllReady = { currentScreen = Screen.Mesh }
                         )
                     }
-                    is Screen.DeviceList -> {
+                    is Screen.Mesh -> {
                         DeviceDiscoveryScreen(
                             bluetoothManager = bluetoothManager,
                             onDeviceSelected = { deviceName, deviceAddress ->
-                                // This handles the client-side navigation.
                                 currentScreen = Screen.Chat(deviceName, deviceAddress)
                             },
-                            onBack = {
-                                currentScreen = Screen.Permissions
-                            }
+                            onEditProfile = { currentScreen = Screen.Profile },
+                            onTabSelected = { currentScreen = it }
+                        )
+                    }
+                    is Screen.Groups -> {
+                        GroupsScreen(onTabSelected = { currentScreen = it })
+                    }
+                    is Screen.Friends -> {
+                        FriendsScreen(onTabSelected = { currentScreen = it })
+                    }
+                    is Screen.Profile -> {
+                        ProfileScreen(
+                            bluetoothManager = bluetoothManager,
+                            onEditProfile = { currentScreen = Screen.ProfileSetup },
+                            onTabSelected = { currentScreen = it }
                         )
                     }
                     is Screen.Chat -> {
@@ -74,10 +83,11 @@ class MainActivity : ComponentActivity() {
                             onBack = {
                                 bluetoothManager.disconnect()
                                 bluetoothManager.clearMessages()
-                                currentScreen = Screen.DeviceList
+                                currentScreen = Screen.Mesh
                             }
                         )
                     }
+                    else -> {}
                 }
             }
         }

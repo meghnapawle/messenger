@@ -3,6 +3,7 @@ package com.example.bluemesh.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +27,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1565C0)),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -34,15 +35,15 @@ fun SplashScreen(onFinished: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.logo),
                 contentDescription = "BlueMesh Logo",
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(140.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = "BlueMesh",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
                 color = Color.White
             )
         }

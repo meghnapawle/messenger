@@ -1,91 +1,82 @@
 package com.example.bluemesh.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bluemesh.R
 
 @Composable
-fun OnboardingScreen(onFinish: () -> Unit) {
-
-    var page by remember { mutableStateOf(0) }
-
-    val titles = listOf(
-        "Bluetooth Mesh Chat",
-        "No Internet Needed",
-        "Multi-hop Messaging",
-        "Private & Secure"
-    )
-
-    val descriptions = listOf(
-        "Chat with nearby devices using Bluetooth mesh networking.",
-        "Messages travel device-to-device without mobile data.",
-        "Your message hops across phones to reach distant users.",
-        "Only nearby participants can see your messages."
-    )
-
+fun OnboardingScreen(onFinished: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-
-        Spacer(modifier = Modifier.height(80.dp))
-
-        Card(
+        Image(
+            painter = painterResource(id = R.drawable.logo),
+            contentDescription = "BlueMesh Logo",
+            modifier = Modifier.size(140.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = "Welcome to\nBlueMesh",
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Black,
+            lineHeight = 42.sp,
+            textAlign = TextAlign.Center,
+            color = Color.White
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Secure, server-less messaging using Bluetooth. No internet required.",
+            textAlign = TextAlign.Center,
+            color = Color.Gray,
+            fontSize = 18.sp
+        )
+        
+        Spacer(modifier = Modifier.height(48.dp))
+        
+        Button(
+            onClick = onFinished,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
+                .height(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = titles[page],
-                    fontSize = 22.sp,
+                    text = "Get Started",
+                    color = Color.Black,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = descriptions[page],
-                    fontSize = 16.sp
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = Color.Black
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-
-            Button(
-                onClick = { onFinish() }
-            ) {
-                Text("Skip")
-            }
-
-            Button(
-                onClick = {
-                    if (page < 3) page++
-                    else onFinish()
-                }
-            ) {
-                Text(if (page < 3) "Next" else "Done")
             }
         }
     }

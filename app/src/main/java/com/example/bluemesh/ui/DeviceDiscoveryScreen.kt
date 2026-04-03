@@ -1,64 +1,43 @@
 package com.example.bluemesh.ui
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.bluemesh.bluetooth.BluetoothChatManager
 
 @SuppressLint("MissingPermission")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceDiscoveryScreen(
     bluetoothManager: BluetoothChatManager,
     onDeviceSelected: (deviceName: String, deviceAddress: String) -> Unit,
-    onBack: () -> Unit
+    onEditProfile: () -> Unit,
+    onTabSelected: (Screen) -> Unit
 ) {
     val discoveredDevices by bluetoothManager.discoveredDevices.collectAsState()
+    val userName by bluetoothManager.userName.collectAsState()
+    val userVibe by bluetoothManager.userVibe.collectAsState()
     var isDiscovering by remember { mutableStateOf(false) }
-
-    val pairedDevices = remember { bluetoothManager.getPairedDevices() }
-
-    val discoverableLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { /* Nothing to do with result */ }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -80,99 +59,199 @@ fun DeviceDiscoveryScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Discover Devices") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+        bottomBar = { BottomNav(Screen.Mesh, onTabSelected) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
                 .padding(16.dp)
         ) {
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    val intent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
-                        putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
-                    }
-                    discoverableLauncher.launch(intent)
-                }) {
-                Text("Make this device discoverable")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            DeviceListSection(
-                header = "Paired Devices",
-                devices = pairedDevices,
-                onDeviceClick = { device ->
-                    onDeviceSelected(device.name ?: "Unknown", device.address)
-                }
-            )
-
-            DeviceListSection(
-                header = "Available Devices",
-                devices = discoveredDevices.filter { it !in pairedDevices },
-                onDeviceClick = { device ->
-                    onDeviceSelected(device.name ?: "Unknown", device.address)
-                }
-            )
-
+            // Top Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isDiscovering) {
-                    CircularProgressIndicator()
-                    Text("Scanning...", modifier = Modifier.padding(start = 8.dp))
-                } else {
-                    Button(onClick = {
-                        isDiscovering = true
-                        bluetoothManager.startDiscovery()
-                    }) {
-                        Text("Scan for devices")
+                Column {
+                    Text(
+                        text = "Mesh",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2DE0AD))
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Active — ${discoveredDevices.size} nearby",
+                            fontSize = 14.sp,
+                            color = Color(0xFF2DE0AD)
+                        )
                     }
+                }
+                IconButton(
+                    onClick = { /* Search */ },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // User Profile Card
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onEditProfile() },
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2DE0AD).copy(alpha = 0.2f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF2DE0AD).copy(alpha = 0.2f))
+                            .border(1.dp, Color(0xFF2DE0AD), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = userVibe, fontSize = 28.sp)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = userName,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "(you)", fontSize = 14.sp, color = Color.Gray)
+                        }
+                        Text(text = "Broadcasting • Node hub", fontSize = 14.sp, color = Color(0xFF2DE0AD))
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF2DE0AD).copy(alpha = 0.1f)
+                    ) {
+                        Text(
+                            text = "ONLINE",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2DE0AD)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Scanning Status Bar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isDiscovering) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF2DE0AD)
+                        )
+                    } else {
+                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Gray))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (isDiscovering) "Scanning for nearby devices..." else "Scanner idle",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = "NEARBY · ${discoveredDevices.size} DEVICES",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Gray,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Discovery List
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(discoveredDevices) { device ->
+                    DeviceCard(
+                        name = device.name ?: "Unknown device",
+                        initials = (device.name ?: "??").take(2).uppercase(),
+                        onConnect = { onDeviceSelected(device.name ?: "Unknown", device.address) }
+                    )
                 }
             }
         }
     }
 }
 
-@SuppressLint("MissingPermission")
 @Composable
-private fun DeviceListSection(
-    header: String,
-    devices: List<BluetoothDevice>,
-    onDeviceClick: (BluetoothDevice) -> Unit
-) {
-    Column(modifier = Modifier.padding(bottom = 16.dp)) {
-        Text(text = header, style = MaterialTheme.typography.titleMedium)
-        if (devices.isEmpty()) {
-            Text(
-                text = "No devices found.",
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        } else {
-            LazyColumn {
-                items(devices) { device ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onDeviceClick(device) }
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Text(text = "${device.name ?: "Unknown Device"}\n${device.address}")
-                    }
-                }
+fun DeviceCard(name: String, initials: String, onConnect: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = initials, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = "Signal: Good", fontSize = 14.sp, color = Color.Gray)
+            }
+            Button(
+                onClick = onConnect,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2DE0AD)),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(text = "Connect", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -47,9 +47,20 @@ class BluetoothChatManager(private val context: Context) {
     private val _discoveredDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<BluetoothDevice>> = _discoveredDevices.asStateFlow()
 
+    private val _userName = MutableStateFlow("Arjun K.")
+    val userName: StateFlow<String> = _userName.asStateFlow()
+
+    private val _userVibe = MutableStateFlow("🐦")
+    val userVibe: StateFlow<String> = _userVibe.asStateFlow()
+
     private var bluetoothGatt: BluetoothGatt? = null
     private var gattServer: BluetoothGattServer? = null
     private var connectedDevice: BluetoothDevice? = null
+
+    fun updateProfile(name: String, vibe: String) {
+        _userName.value = name
+        _userVibe.value = vibe
+    }
 
     private fun hasPermission(permission: String): Boolean {
         return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED

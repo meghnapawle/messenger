@@ -1,12 +1,16 @@
 package com.example.bluemesh.ui
 
-/**
- * Represents the different screens in the app navigation flow
- */
 sealed class Screen {
     data object Splash : Screen()
     data object Onboarding : Screen()
+    data object ProfileSetup : Screen()
     data object Permissions : Screen()
-    data object DeviceList : Screen()
+    
+    // Main App Screens (Tabs)
+    data object Mesh : Screen()
+    data object Groups : Screen()
+    data object Friends : Screen()
+    data object Profile : Screen()
+
     data class Chat(val deviceName: String, val deviceAddress: String) : Screen()
 }
