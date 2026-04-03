@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Use the same background color for the icon itself -->
+    <background android:drawable="@color/splash_bg" />
+    <foreground>
+        <!-- This scales the bird down by 20% to keep the beak and tail inside the circle -->
+        <inset
+            android:drawable="@drawable/bluemesh_logo"
+            android:inset="20%" />
+    </foreground>
+</adaptive-icon>

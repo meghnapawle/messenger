@@ -1,7 +1,6 @@
 package com.example.bluemesh.ui
 
 sealed class Screen {
-    data object Splash : Screen()
     data object Onboarding : Screen()
     data object ProfileSetup : Screen()
     data object Permissions : Screen()

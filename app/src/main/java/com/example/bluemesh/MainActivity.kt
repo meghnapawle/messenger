@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.bluemesh.bluetooth.BluetoothChatManager
 import com.example.bluemesh.bluetooth.ConnectionState
 import com.example.bluemesh.ui.*
@@ -12,11 +13,12 @@ import com.example.bluemesh.ui.theme.BlueMeshTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         setContent {
             BlueMeshTheme {
-                var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Onboarding) }
                 val activity = this@MainActivity
                 val bluetoothManager = remember { BluetoothChatManager(applicationContext) }
 
@@ -35,7 +37,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Handle system back button for different screens
-                BackHandler(enabled = currentScreen !is Screen.Splash && currentScreen !is Screen.Mesh) {
+                BackHandler(enabled = currentScreen !is Screen.Mesh) {
                     when (currentScreen) {
                         is Screen.Chat -> {
                             bluetoothManager.disconnect()
@@ -61,9 +63,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when (val screen = currentScreen) {
-                    is Screen.Splash -> {
-                        SplashScreen { currentScreen = Screen.Onboarding }
-                    }
                     is Screen.Onboarding -> {
                         OnboardingScreen { currentScreen = Screen.ProfileSetup }
                     }
@@ -117,7 +116,6 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    else -> {}
                 }
             }
         }
