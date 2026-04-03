@@ -2,6 +2,7 @@ package com.example.bluemesh
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import com.example.bluemesh.bluetooth.BluetoothChatManager
@@ -29,6 +30,32 @@ class MainActivity : ComponentActivity() {
                     bluetoothManager.connectionState.collect { state ->
                         if (state is ConnectionState.Connected && currentScreen !is Screen.Chat) {
                             currentScreen = Screen.Chat(state.deviceName ?: "Unknown", state.deviceAddress)
+                        }
+                    }
+                }
+
+                // Handle system back button for different screens
+                BackHandler(enabled = currentScreen !is Screen.Splash && currentScreen !is Screen.Mesh) {
+                    when (currentScreen) {
+                        is Screen.Chat -> {
+                            bluetoothManager.disconnect()
+                            bluetoothManager.clearMessages()
+                            currentScreen = Screen.Mesh
+                        }
+                        is Screen.Profile, is Screen.Groups, is Screen.Friends -> {
+                            currentScreen = Screen.Mesh
+                        }
+                        is Screen.ProfileSetup -> {
+                            currentScreen = Screen.Onboarding
+                        }
+                        is Screen.Permissions -> {
+                            currentScreen = Screen.ProfileSetup
+                        }
+                        is Screen.Onboarding -> {
+                            activity.finish()
+                        }
+                        else -> {
+                            currentScreen = Screen.Mesh
                         }
                     }
                 }

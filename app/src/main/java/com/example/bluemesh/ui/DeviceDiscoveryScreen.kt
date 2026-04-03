@@ -22,9 +22,12 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.bluemesh.bluetooth.BluetoothChatManager
+import com.example.bluemesh.bluetooth.ConnectionState
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -37,6 +40,8 @@ fun DeviceDiscoveryScreen(
     val discoveredDevices by bluetoothManager.discoveredDevices.collectAsState()
     val userName by bluetoothManager.userName.collectAsState()
     val userVibe by bluetoothManager.userVibe.collectAsState()
+    val connectionState by bluetoothManager.connectionState.collectAsState()
+    
     var isDiscovering by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -56,6 +61,45 @@ fun DeviceDiscoveryScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+    // Handle Connection Request Dialogs
+    when (val state = connectionState) {
+        is ConnectionState.IncomingRequest -> {
+            ConnectionRequestDialog(
+                requesterName = state.name,
+                onAccept = { bluetoothManager.acceptConnection() },
+                onDecline = { bluetoothManager.declineConnection() }
+            )
+        }
+        is ConnectionState.WaitingForResponse -> {
+            Dialog(
+                onDismissRequest = { /* Don't dismiss on outside click */ },
+                properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF2DE0AD))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Waiting for response...", color = Color.White)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TextButton(onClick = { bluetoothManager.disconnect() }) {
+                            Text("Cancel", color = Color.Red)
+                        }
+                    }
+                }
+            }
+        }
+        is ConnectionState.Failed -> {
+            // Error handling if needed
+        }
+        else -> {}
     }
 
     Scaffold(
@@ -211,8 +255,59 @@ fun DeviceDiscoveryScreen(
                     DeviceCard(
                         name = device.name ?: "Unknown device",
                         initials = (device.name ?: "??").take(2).uppercase(),
-                        onConnect = { onDeviceSelected(device.name ?: "Unknown", device.address) }
+                        onConnect = { bluetoothManager.connect(device) }
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConnectionRequestDialog(requesterName: String, onAccept: () -> Unit, onDecline: () -> Unit) {
+    Dialog(
+        onDismissRequest = { /* Force explicit action */ },
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2DE0AD).copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Incoming Request",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "$requesterName wants to chat with you.",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(
+                        onClick = onDecline,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Decline")
+                    }
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2DE0AD))
+                    ) {
+                        Text("Accept", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

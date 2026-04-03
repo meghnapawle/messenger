@@ -32,18 +32,9 @@ fun ChatScreen(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // This effect will run when the screen is first composed, 
-    // initiating the connection from the client side.
-    LaunchedEffect(deviceAddress) {
-        if (connectionState !is ConnectionState.Connected) {
-            val device = bluetoothManager.getPairedDevices().find { it.address == deviceAddress }
-                ?: bluetoothManager.discoveredDevices.value.find { it.address == deviceAddress }
-            device?.let {
-                bluetoothManager.connect(it)
-            }
-        }
-    }
-
+    // Connection is now initiated from DeviceDiscoveryScreen by calling bluetoothManager.connect(device)
+    // This LaunchedEffect is no longer needed for initiating connection but can be kept to monitor state
+    
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -63,6 +54,8 @@ fun ChatScreen(
                                 is ConnectionState.Listening -> "Listening…"
                                 is ConnectionState.Disconnected, is ConnectionState.Idle -> "Disconnected"
                                 is ConnectionState.Failed -> "Error: ${state.message}"
+                                is ConnectionState.WaitingForResponse -> "Waiting for acceptance..."
+                                is ConnectionState.IncomingRequest -> "Incoming Request..."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = when (connectionState) {
