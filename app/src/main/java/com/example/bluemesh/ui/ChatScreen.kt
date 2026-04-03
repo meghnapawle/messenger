@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.bluemesh.bluetooth.BluetoothChatManager
 import com.example.bluemesh.bluetooth.ChatMessage
@@ -32,9 +33,6 @@ fun ChatScreen(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // Connection is now initiated from DeviceDiscoveryScreen by calling bluetoothManager.connect(device)
-    // This LaunchedEffect is no longer needed for initiating connection but can be kept to monitor state
-    
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -46,7 +44,16 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Chat with $deviceName")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Chat with $deviceName")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            // Using deviceAddress here to fix the unused parameter warning
+                            Text(
+                                text = "[$deviceAddress]",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray
+                            )
+                        }
                         Text(
                             text = when (val state = connectionState) {
                                 is ConnectionState.Connected -> "Connected to ${state.deviceName}"

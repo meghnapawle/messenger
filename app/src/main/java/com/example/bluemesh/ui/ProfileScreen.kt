@@ -1,9 +1,10 @@
 package com.example.bluemesh.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable // Added
-import androidx.compose.foundation.interaction.MutableInteractionSource // Added
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,15 +12,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember // Added
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed // Added
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bluemesh.R
 import com.example.bluemesh.bluetooth.BluetoothChatManager
 
 @Composable
@@ -30,6 +34,24 @@ fun ProfileScreen(
 ) {
     val userName by bluetoothManager.userName.collectAsState()
     val userVibe by bluetoothManager.userVibe.collectAsState()
+
+    // Helper to get drawable ID from "avatarX" string
+    val userAvatarResId = remember(userVibe) {
+        val idx = userVibe.removePrefix("avatar").toIntOrNull() ?: 1
+        when(idx) {
+            1 -> R.drawable.avatar1
+            2 -> R.drawable.avatar2
+            3 -> R.drawable.avatar3
+            4 -> R.drawable.avatar4
+            5 -> R.drawable.avatar5
+            6 -> R.drawable.avatar6
+            7 -> R.drawable.avatar7
+            8 -> R.drawable.avatar8
+            9 -> R.drawable.avatar9
+            10 -> R.drawable.avatar10
+            else -> R.drawable.avatar1
+        }
+    }
 
     Scaffold(
         bottomBar = { BottomNav(Screen.Profile, onTabSelected) },
@@ -52,7 +74,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Large Profile Picture (Vibe)
+            // Large Profile Picture (Avatar)
             Box(
                 modifier = Modifier
                     .size(160.dp)
@@ -61,7 +83,12 @@ fun ProfileScreen(
                     .border(2.dp, Color(0xFF2DE0AD), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = userVibe, fontSize = 80.sp)
+                Image(
+                    painter = painterResource(id = userAvatarResId),
+                    contentDescription = "My Avatar",
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -88,7 +115,7 @@ fun ProfileScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    ProfileOption("Edit Name & Vibe", "✏️", onEditProfile)
+                    ProfileOption("Edit Name & Avatar", R.drawable.profile, onEditProfile)
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f), modifier = Modifier.padding(vertical = 12.dp))
                     ProfileOption("Privacy Settings", "🔒") {}
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f), modifier = Modifier.padding(vertical = 12.dp))
@@ -100,7 +127,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileOption(label: String, icon: String, onClick: () -> Unit) {
+fun ProfileOption(label: String, icon: Any, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -108,7 +135,15 @@ fun ProfileOption(label: String, icon: String, onClick: () -> Unit) {
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, fontSize = 20.sp)
+        if (icon is Int) {
+            Image(
+                painter = painterResource(id = icon),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+        } else if (icon is String) {
+            Text(text = icon, fontSize = 20.sp)
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.weight(1f))
@@ -116,7 +151,6 @@ fun ProfileOption(label: String, icon: String, onClick: () -> Unit) {
     }
 }
 
-// Added this extension function to fix the Unresolved Reference error
 fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed {
     this.clickable(
         interactionSource = remember { MutableInteractionSource() },

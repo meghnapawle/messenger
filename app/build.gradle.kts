@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.example.bluemesh"
-    compileSdk {
-        version = release(36)
-    }
+    // Updated to 36 as required by the latest library dependencies
+    compileSdk = 36 
 
     defaultConfig {
         applicationId = "com.example.bluemesh"
         minSdk = 26
-        targetSdk = 36
+        // targetSdk can stay at 34 or 35 for better compatibility with your device
+        targetSdk = 34 
         versionCode = 1
         versionName = "1.0"
 

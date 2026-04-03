@@ -2,6 +2,7 @@ package com.example.bluemesh.ui
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.bluemesh.R
 import com.example.bluemesh.bluetooth.BluetoothChatManager
 import com.example.bluemesh.bluetooth.ConnectionState
 
@@ -39,10 +43,28 @@ fun DeviceDiscoveryScreen(
 ) {
     val discoveredDevices by bluetoothManager.discoveredDevices.collectAsState()
     val userName by bluetoothManager.userName.collectAsState()
-    val userVibe by bluetoothManager.userVibe.collectAsState()
+    val userVibe by bluetoothManager.userVibe.collectAsState() // This now contains "avatarX"
     val connectionState by bluetoothManager.connectionState.collectAsState()
     
     var isDiscovering by remember { mutableStateOf(false) }
+
+    // Helper to get drawable ID from "avatarX" string
+    val userAvatarResId = remember(userVibe) {
+        val idx = userVibe.removePrefix("avatar").toIntOrNull() ?: 1
+        when(idx) {
+            1 -> R.drawable.avatar1
+            2 -> R.drawable.avatar2
+            3 -> R.drawable.avatar3
+            4 -> R.drawable.avatar4
+            5 -> R.drawable.avatar5
+            6 -> R.drawable.avatar6
+            7 -> R.drawable.avatar7
+            8 -> R.drawable.avatar8
+            9 -> R.drawable.avatar9
+            10 -> R.drawable.avatar10
+            else -> R.drawable.avatar1
+        }
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -95,9 +117,6 @@ fun DeviceDiscoveryScreen(
                     }
                 }
             }
-        }
-        is ConnectionState.Failed -> {
-            // Error handling if needed
         }
         else -> {}
     }
@@ -152,7 +171,7 @@ fun DeviceDiscoveryScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // User Profile Card
+            // User Profile Card (Shows YOUR selected avatar)
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -173,7 +192,12 @@ fun DeviceDiscoveryScreen(
                             .border(1.dp, Color(0xFF2DE0AD), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = userVibe, fontSize = 28.sp)
+                        Image(
+                            painter = painterResource(id = userAvatarResId),
+                            contentDescription = "My Avatar",
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -254,7 +278,6 @@ fun DeviceDiscoveryScreen(
                 items(discoveredDevices) { device ->
                     DeviceCard(
                         name = device.name ?: "Unknown device",
-                        initials = (device.name ?: "??").take(2).uppercase(),
                         onConnect = { bluetoothManager.connect(device) }
                     )
                 }
@@ -315,7 +338,7 @@ fun ConnectionRequestDialog(requesterName: String, onAccept: () -> Unit, onDecli
 }
 
 @Composable
-fun DeviceCard(name: String, initials: String, onConnect: () -> Unit) {
+fun DeviceCard(name: String, onConnect: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -333,7 +356,13 @@ fun DeviceCard(name: String, initials: String, onConnect: () -> Unit) {
                     .background(Color.White.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = initials, color = Color.White, fontWeight = FontWeight.Bold)
+                // Show a default avatar for others for now
+                Image(
+                    painter = painterResource(id = R.drawable.avatar1),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
