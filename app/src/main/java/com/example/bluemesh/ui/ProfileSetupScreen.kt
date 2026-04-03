@@ -44,7 +44,7 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp)) // Reduced from 40dp to move things up
         
         Text(
             text = "What should\nwe call you?",
@@ -55,7 +55,7 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
         
         Text(
             text = "This is shown to nearby devices. You only set this once.",
@@ -64,12 +64,12 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp)) // Reduced from 24dp
 
         // Large Circle showing selected Avatar
         Box(
             modifier = Modifier
-                .size(160.dp) // Increased from 140dp
+                .size(160.dp)
                 .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), CircleShape)
                 .padding(8.dp)
                 .clip(CircleShape)
@@ -84,7 +84,7 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp)) // Reduced from 32dp
         
         Text(
             text = "PICK AN AVATAR",
@@ -94,12 +94,12 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
             color = Color.Gray
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp)) // Reduced from 20dp
 
-        // Avatar Grid - Larger Icons and adjusted spacing
+        // Avatar Grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(5),
-            modifier = Modifier.height(160.dp), // Increased from 130dp to accommodate larger items
+            modifier = Modifier.height(160.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -139,16 +139,9 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Text(
-            text = "Only visible to people in your mesh.\nNo accounts, no servers — ever.",
-            textAlign = TextAlign.Center,
-            color = Color.Gray,
-            fontSize = 12.sp
-        )
+        // Removed the "Only visible to people..." text as requested
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp)) // Added space since text was removed
 
         Button(
             onClick = { 
@@ -185,7 +178,7 @@ fun ProfileSetupScreen(onFinished: (name: String, vibe: String) -> Unit) {
 fun AvatarItem(resId: Int, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(60.dp) // Increased from 52dp
+            .size(60.dp)
             .clip(CircleShape)
             .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
             .border(

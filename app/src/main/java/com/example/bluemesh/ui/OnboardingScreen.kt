@@ -31,16 +31,16 @@ fun OnboardingScreen(onFinished: () -> Unit) {
         Image(
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "BlueMesh Logo",
-            modifier = Modifier.size(140.dp)
+            modifier = Modifier.size(160.dp)
         )
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(40.dp))
         
         Text(
             text = "Welcome to\nBlueMesh",
-            fontSize = 36.sp,
+            fontSize = 40.sp,
             fontWeight = FontWeight.Black,
-            lineHeight = 42.sp,
+            lineHeight = 46.sp,
             textAlign = TextAlign.Center,
             color = Color.White
         )
@@ -48,13 +48,14 @@ fun OnboardingScreen(onFinished: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "Secure, server-less messaging using Bluetooth. No internet required.",
+            text = "Experience the next generation of decentralized messaging. Purely peer-to-peer.",
             textAlign = TextAlign.Center,
             color = Color.Gray,
-            fontSize = 18.sp
+            fontSize = 18.sp,
+            modifier = Modifier.padding(horizontal = 20.dp)
         )
         
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(60.dp))
         
         Button(
             onClick = onFinished,
@@ -66,7 +67,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Get Started",
+                    text = "Continue",
                     color = Color.Black,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold

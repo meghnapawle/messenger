@@ -35,7 +35,7 @@ fun BottomNav(
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavItem("Mesh", R.drawable.globe, currentScreen is Screen.Mesh) { onTabSelected(Screen.Mesh) }
-            NavItem("Groups", R.drawable.group, currentScreen is Screen.Groups) { onTabSelected(Screen.Groups) }
+            NavItem("Global", R.drawable.group, currentScreen is Screen.Global) { onTabSelected(Screen.Global) }
             NavItem("Friends", R.drawable.friend, currentScreen is Screen.Friends) { onTabSelected(Screen.Friends) }
             NavItem("Profile", R.drawable.profile, currentScreen is Screen.Profile) { onTabSelected(Screen.Profile) }
         }

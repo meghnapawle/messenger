@@ -8,14 +8,23 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 
 @Composable
@@ -37,7 +46,7 @@ fun BluetoothPermissionScreen(
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.BLUETOOTH_ADVERTISE,
-                Manifest.permission.ACCESS_FINE_LOCATION // Added for better compatibility
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
         } else {
             arrayOf(
@@ -67,7 +76,7 @@ fun BluetoothPermissionScreen(
             showError = null
             checkBluetoothAndProceed()
         } else {
-            showError = "Permissions (including Location) are required for BLE discovery"
+            showError = "Permissions are required to find nearby devices"
         }
     }
 
@@ -79,7 +88,7 @@ fun BluetoothPermissionScreen(
             showError = null
             checkBluetoothAndProceed()
         } else {
-            showError = "Bluetooth must be enabled"
+            showError = "Bluetooth must be enabled to continue"
         }
     }
 
@@ -90,37 +99,97 @@ fun BluetoothPermissionScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        if (!hasBluetooth) {
-            Text("Bluetooth Not Available", style = MaterialTheme.typography.headlineMedium)
-        } else {
-            Text("Bluetooth & Location Permissions", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("BlueMesh needs Bluetooth and Location to find nearby devices.", textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(32.dp))
+        // Icon Circle
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info, // Changed to Info as it's part of the default library
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
 
-            showError?.let { error ->
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                    Text(text = error, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+        Spacer(modifier = Modifier.height(40.dp))
 
-            if (!hasPermissions) {
-                Button(onClick = { permissionLauncher.launch(permissionsToRequest) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Grant Permissions")
-                }
-            } else if (!bluetoothEnabled) {
-                Button(onClick = {
-                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                    enableBluetoothLauncher.launch(enableBtIntent)
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Enable Bluetooth")
-                }
+        Text(
+            text = "Permissions Required",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Black,
+            color = Color.White,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "To find and connect to devices nearby, BlueMesh needs access to Bluetooth and Location.",
+            color = Color.Gray,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        if (showError != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+            ) {
+                Text(
+                    text = showError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(12.dp),
+                    textAlign = TextAlign.Center,
+                    fontSize = 14.sp
+                )
             }
         }
+
+        if (!hasPermissions) {
+            Button(
+                onClick = { permissionLauncher.launch(permissionsToRequest) },
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Grant Permissions", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        } else if (!bluetoothEnabled) {
+            Button(
+                onClick = {
+                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                    enableBluetoothLauncher.launch(enableBtIntent)
+                },
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Enable Bluetooth", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "Location is only used for device discovery and is never shared.",
+            color = Color.Gray.copy(alpha = 0.6f),
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }

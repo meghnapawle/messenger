@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
                             bluetoothManager.clearMessages()
                             currentScreen = Screen.Mesh
                         }
-                        is Screen.Profile, is Screen.Groups, is Screen.Friends -> {
+                        is Screen.Global, is Screen.Friends, is Screen.Profile -> {
                             currentScreen = Screen.Mesh
                         }
                         is Screen.ProfileSetup -> {
@@ -89,8 +89,11 @@ class MainActivity : ComponentActivity() {
                             onTabSelected = { currentScreen = it }
                         )
                     }
-                    is Screen.Groups -> {
-                        GroupsScreen(onTabSelected = { currentScreen = it })
+                    is Screen.Global -> {
+                        GlobalScreen(
+                            bluetoothManager = bluetoothManager,
+                            onTabSelected = { currentScreen = it }
+                        )
                     }
                     is Screen.Friends -> {
                         FriendsScreen(onTabSelected = { currentScreen = it })

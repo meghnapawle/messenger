@@ -139,7 +139,7 @@ fun DeviceDiscoveryScreen(
             ) {
                 Column {
                     Text(
-                        text = "Mesh",
+                        text = "BlueMesh",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
@@ -212,18 +212,6 @@ fun DeviceDiscoveryScreen(
                             Text(text = "(you)", fontSize = 14.sp, color = Color.Gray)
                         }
                         Text(text = "Broadcasting • Node hub", fontSize = 14.sp, color = Color(0xFF2DE0AD))
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF2DE0AD).copy(alpha = 0.1f)
-                    ) {
-                        Text(
-                            text = "ONLINE",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2DE0AD)
-                        )
                     }
                 }
             }

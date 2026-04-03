@@ -8,7 +8,7 @@ sealed class Screen {
     
     // Main App Screens (Tabs)
     data object Mesh : Screen()
-    data object Groups : Screen()
+    data object Global : Screen() // Renamed from Groups
     data object Friends : Screen()
     data object Profile : Screen()
 
